@@ -181,17 +181,18 @@ print("--------------------------------------------------")
 num_runs = 20  # Number of random initializations
 num_iterations = int(1e4)
 step_size = 1e-3
-final_K_values = np.zeros((num_runs, N*d, N*n, T))
+final_K = np.zeros((num_runs, N*d, N*n, T))
 all_K_history = np.zeros((num_runs, num_iterations, N * d, N * n, T))
 
 # Repeat gradient descent from different initializations
 for run in range(num_runs):
     
     print(f"Run {run+1}/{num_runs}")
-    final_K_values[run, :, :, :], all_K_history[run, :, :, :, :] = perform_gradient_descent( data, step_size, num_iterations)
+    final_K[run, :, :, :], all_K_history[run, :, :, :, :] = perform_gradient_descent( data, step_size, num_iterations)
 
 
 ####################################################################################################
 
-#print_convergence_to_single_point( num_runs, final_K_values, )
-print_gradient_descent_norm(num_iterations,all_K_history, final_K_values)
+#print_convergence_to_single_point( num_runs, final_K, )
+average_final_K = (1 / run)*np.sum(final_K, axis=0)
+print_gradient_descent_norm(num_iterations,all_K_history, average_final_K)
