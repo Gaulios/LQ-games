@@ -23,7 +23,7 @@ if __name__ == '__main__':
     #### System parameters
     
     # System variable - it is assumed to be positive: a > 0
-    a = 1.5
+    a = 3
 
     # Cost functions parameters - all of them are assumed to be positive
     q1 = 1
@@ -68,8 +68,8 @@ if __name__ == '__main__':
     # Plot the functions
     plt.plot(x, br2, label='$br_2(k_1)$', color='blue')
     plt.plot(x, ibr1, label='$br_1^{-1}(k_1)$', color='red')
-    plt.plot(x, linear_upper, label='$a + 1 - k_1$', color='black', linestyle='-')
-    plt.plot(x, linear_lower, label='$a - 1 - k_1$', color='black', linestyle='-')
+    plt.plot(x, linear_upper, label='$|a - k_1 - k_2| = 1$', color='black', linestyle='-')
+    plt.plot(x, linear_lower, color='black', linestyle='-')
 
     # Fill the areas between br2, ibr1 and the stabilizing region limits
     plt.fill_between(x, linear_upper, br2, color=color_map(2), alpha=1)

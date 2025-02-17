@@ -83,13 +83,16 @@ def path_gradient_descent( a, q1, r1, q2, r2, k1, k2, eta1, eta2, epsilon ):
     else:
         stable = 0
     
-    # compute the gradient
-    grad1 = compute_gradient(a,q1,r1,k1,k2)
-    grad2 = compute_gradient(a,q2,r2,k2,k1)
+    grad1 = 2*epsilon #value used to the enter the while
+    grad2 = 0
 
     path = np.array([[k1],[k2]])
 
     while abs(grad1) + abs(grad2) > epsilon and stable == 1:
+
+        # compute the gradient
+        grad1 = compute_gradient(a,q1,r1,k1,k2)
+        grad2 = compute_gradient(a,q2,r2,k2,k1)
 
         # gradient descent
         k1 = k1 - eta1*grad1
@@ -101,10 +104,6 @@ def path_gradient_descent( a, q1, r1, q2, r2, k1, k2, eta1, eta2, epsilon ):
 
         # save the value
         path = np.concatenate( (path, np.array([[k1],[k2]]) ), axis=1 )
-
-        # recompute the gradient
-        grad1 = compute_gradient(a,q1,r1,k1,k2)
-        grad2 = compute_gradient(a,q2,r2,k2,k1)
 
     return path, stable
 
@@ -144,57 +143,80 @@ def show_values_NE( nNE, kNE, cost ) -> None:
     return None
 
 # Important
-def show_convergence_map( a, b1, b2, q1, r1, q2, r2,  kMin, kMax, nSamples, map, position_NE ) -> None:
+def show_convergence_map(a, b1, b2, q1, r1, q2, r2, kMin, kMax, nSamples, map, kNE):
+    
+    br1 = np.zeros(nSamples + 2)
+    ibr2 = np.zeros(nSamples + 2)
+    x = np.linspace(kMin, kMax, nSamples + 2)
 
-    br1 = np.zeros( nSamples + 2 )
-    ibr2 = np.zeros( nSamples + 2 )
-    x = np.linspace( kMin, kMax, nSamples + 2)
-
-    # Compute the best response of agent 2 and the inverse best response of agent 1 in the right interval
-    for i in range( nSamples + 2 ) :
-        
-        br1[i] =  ( nSamples/( kMax - kMin ) )*( kMax - compute_best_response( a, q2, r2, x[i] ) )
-        if x[i] == 0: # the inverse best response is not well defined in kj = 0
-            ibr2[i] = ( nSamples/( kMax - kMin ) )*( kMax - a )
+    # Compute the best response and inverse best response
+    for i in range(nSamples + 2):
+        br1[i] = (nSamples - 1) * (kMax - compute_best_response(a, q2, r2, x[i])) / (kMax - kMin)
+        if x[i] == 0:
+            ibr2[i] = (nSamples - 1) * (kMax - a) / (kMax - kMin)
         else:
-            ibr2[i] = ( nSamples/( kMax - kMin ) )*( kMax - compute_inverse_best_response( a, q1, r1, x[i] ) )
+            ibr2[i] = (nSamples - 1) * (kMax - compute_inverse_best_response(a, q1, r1, x[i])) / (kMax - kMin)
 
+    # Define custom colormap
     custom_cmap = get_colors_for_covergence_map()
 
-    plt.imshow( map, cmap = custom_cmap)
-    #plt.imshow( map, extent=[kMin, kMax, kMin, kMax], origin='lower', aspect='auto', cmap = custom_cmap)
+    # Plot the convergence map
+    plt.imshow(map, cmap=custom_cmap, origin="upper", interpolation='none')
 
-    # add the scale on the x and y axis
+    # Adjust x and y labels to show correct k1 and k2 values
     labels, locations = plt.yticks()
-    newLabelsx = labelx_convergence_map( b1, kMin, kMax, labels )
-    newLabelsy = labely_convergence_map( b2, kMin, kMax, labels )
-    plt.xticks( labels, newLabelsx )
-    plt.yticks(labels, newLabelsy )
+    newLabelsx = labelx_convergence_map(b1, kMin, kMax, labels)
+    newLabelsy = labely_convergence_map(b2, kMin, kMax, labels)
+    plt.xticks(labels, newLabelsx)
+    plt.yticks(labels, newLabelsy)
 
-    # make the picture of the correct dimensions
-    plt.xlim(0, nSamples-1)
-    plt.ylim(nSamples-1,0)
+    # Ensure the axis is set properly
+    plt.xlim(0, nSamples - 1)
+    plt.ylim(nSamples - 1, 0)  # Flip to match imshow orientation
 
-    # Plot a star at the Nash equilibria
-    position_NE = find_position_NE_map( kMin, kMax, nSamples, kNE)
-    plt.scatter( position_NE[ : , 0 ] , position_NE[ : , 1 ], color='purple', marker='*', s=200, label='NE')
+    # Convert Nash Equilibria to correct pixel coordinates
+    position_NE = np.zeros_like(kNE)
+    position_NE[:, 0] = (nSamples - 1) * (kNE[:, 0] - kMin) / (kMax - kMin)  # k1 to x-axis
+    position_NE[:, 1] = (nSamples - 1) * (kMax - kNE[:, 1]) / (kMax - kMin)  # k2 to y-axis
 
-    # Plot the functions
-    xplot = np.linspace( -1, nSamples+1, nSamples + 2)
+    # Plot the Nash Equilibria
+    plt.scatter(position_NE[:, 0], position_NE[:, 1], color='purple', marker='*', s=200, label='NE')
+
+    # Plot the best response functions
+    xplot = np.linspace(-1, nSamples + 1, nSamples + 2)
     plt.plot(xplot, br1, label='$br_2(k_1)$', color='blue')
     plt.plot(xplot, ibr2, label='$br_1^{-1}(k_1)$', color='red')
 
-    # The title, the labels on the axis, and the legend
-    plt.title(f'Gradient descent with eta = {eta}')
-    plt.legend()
-    plt.xlabel('K1', fontsize=16)
-    plt.ylabel('K2', fontsize=16)
+    # Define k1 values for the line
+    k1_values = np.linspace(kMin, kMax, 100)
 
+    # Compute k2 values for the two boundary conditions
+    k2_line1 = a - 1 - k1_values
+    k2_line2 = a + 1 - k1_values
+
+    # Convert only the valid points to pixel coordinates
+    k1_pixel1 = (nSamples - 1) * (k1_values - kMin) / (kMax - kMin)
+    k2_pixel1 = (nSamples - 1) * (kMax - k2_line1) / (kMax - kMin)
+
+    k1_pixel2 = (nSamples - 1) * (k1_values - kMin) / (kMax - kMin)
+    k2_pixel2 = (nSamples - 1) * (kMax - k2_line2) / (kMax - kMin)
+
+    # Plot the valid parts of the lines
+    plt.plot(k1_pixel1, k2_pixel1, color='black', linestyle='-', label='$|a - b_1 k_1 - b_2 k_2| = 1$')
+    plt.plot(k1_pixel2, k2_pixel2, color='black', linestyle='-')
+
+
+    # Labels, legend, and title
+    plt.legend()
+    plt.xlabel('$k_1$', fontsize=16)
+    plt.ylabel('$k_2$', fontsize=16)
     plt.show()
 
     return None
+
 # ______________________________________________________
 
+    
 def get_colors_for_covergence_map():
 
     # Get the Pastel1 colormap
@@ -262,21 +284,6 @@ def show_flow_map( b1, b2,  kMin, kMax, flow_map_x, flow_map_y, kNE ) -> None:
     return None
 # ______________________________________________________
 
-def find_position_NE_map( kMin, kMax, nSamples, kNE ):
-
-    delta = (kMax - kMin)/nSamples
-
-    # Get the number of Nash equilibria
-    rows, cols = kNE.shape
-
-    coordinate = np.zeros( (rows, 2 ) )
-
-    for i in range( 0, rows ):
-        coordinate[ i, 0 ] = round( ( kNE[ i, 0 ] - kMin ) / delta )
-        coordinate[ i, 1 ] = round( ( kMax - kNE[ i, 1 ] ) / delta ) - 1
-
-    return coordinate
-
 def find_position_NE_flow( kMin, kMax, nSamples, kNE ):
 
     deltak = (kMax - kMin)/nSamples
@@ -321,18 +328,19 @@ if __name__ == '__main__':
     #____________________________________________________________________________________________________________________
     #### Compute the Nash equilibria
 
-    # possible values of K2 at Nash equilibrium
-    k2 = compute_polynomial_roots(a,q1,q2,r1,r2)
     kNE = np.zeros((3,2))       # Here we will save the Nash equilibria
     cost = np.zeros((3,2))      # Here we will save the costs
     nNE = 0                     # Number of Nash equilibria
+
+    # possible values of K2 at Nash equilibrium
+    k2 = compute_polynomial_roots(a,q1,q2,r1,r2)
 
     # if k2 does not respect the conditions in the if, it can not be a Nash equilibrium
     for i in range(k2.shape[0]):
 
         if k2[i].imag == 0 and k2[i].real > 0 and k2[i].real < a:
             
-            # take the real part for the second agent
+            # take the real part for the second agent (the imaginary part is zero)
             kNE[nNE,1] = k2[i].real
 
             # compute the best response for the first agent
@@ -354,8 +362,7 @@ if __name__ == '__main__':
     #____________________________________________________________________________________________________________________
     #### Compute the convergence map and the flow map
 
-    # 
-    nSamples = 200
+    nSamples = 300
     convergence_map = np.zeros( ( nSamples, nSamples ) )
     flow_map_x = np.zeros( ( nSamples, nSamples ) )
     flow_map_y = np.zeros( ( nSamples, nSamples ) )
@@ -376,7 +383,7 @@ if __name__ == '__main__':
             k1 = kMin + j * deltak          # k1 will be on the x axis
 
             # the initial policies are stabilizing
-            if abs( a - k1 - k2 ) < 0.99:
+            if abs( a - k1 - k2 ) < 1:
 
                 # compute all the gradient descent
                 kConv = perform_gradient_descent( a, q1, r1, q2, r2, k1, k2, eta1, eta2, epsilon )
@@ -402,18 +409,21 @@ if __name__ == '__main__':
     show_convergence_map( a, b1, b2, q1, r1, q2, r2, kMin, kMax, nSamples, convergence_map, kNE )
 
     #plot the flow map
-    show_flow_map( b1, b2,  kMin, kMax, flow_map_x, flow_map_y, kNE)
+    #show_flow_map( b1, b2,  kMin, kMax, flow_map_x, flow_map_y, kNE)
+
 
     #____________________________________________________________________________________________________________________
     #### 
     
-    # k1 = 0
-    # k2 = 0.3
+    # k1 = kNE[1,0] + 0.001
+    # k2 = kNE[1,1] + 0.001
     # (path,stable) = path_gradient_descent( a, q1, r1, q2, r2, k1, k2, 0.0004, 0.0004, epsilon )
+    # # Did the algorithm converged to a stable solution?
     # print("The final point reached is stable?\n", stable)
+    # # To which Nash equilibrium did it converge?
     # l = path[0,:].size
     # ind = determine_index_NE_reached(a,path[0,l-1],path[1,l-1],kNE,nNE)
-    # print(ind)
+    # print("The NE reached is number:", ind)
     # print(path[0,l-1],path[1,l-1])
 
 
