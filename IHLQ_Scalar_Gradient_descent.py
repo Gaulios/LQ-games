@@ -309,7 +309,8 @@ if __name__ == '__main__':
     #### Parameters
 
     # System variable - it is assumed to be positive: a > 0
-    a = 1.0947
+    #a = 1.0947 
+    a = 1.086385
     b1 = 0.10254
     b2 = 0.045934
 
@@ -320,7 +321,7 @@ if __name__ == '__main__':
     r2 = 0.5949 / ( b2**2 )
 
     # Parameters for the gradient descent
-    eta = 0.0004  #step size
+    eta = 0.0001  #step size
     eta1 = eta
     eta2 = eta
     epsilon = 0.01
@@ -362,7 +363,7 @@ if __name__ == '__main__':
     #____________________________________________________________________________________________________________________
     #### Compute the convergence map and the flow map
 
-    nSamples = 300
+    nSamples = 150
     convergence_map = np.zeros( ( nSamples, nSamples ) )
     flow_map_x = np.zeros( ( nSamples, nSamples ) )
     flow_map_y = np.zeros( ( nSamples, nSamples ) )
@@ -409,42 +410,42 @@ if __name__ == '__main__':
     show_convergence_map( a, b1, b2, q1, r1, q2, r2, kMin, kMax, nSamples, convergence_map, kNE )
 
     #plot the flow map
-    #show_flow_map( b1, b2,  kMin, kMax, flow_map_x, flow_map_y, kNE)
+    show_flow_map( b1, b2,  kMin, kMax, flow_map_x, flow_map_y, kNE)
 
 
     #____________________________________________________________________________________________________________________
     #### 
     
-    # k1 = kNE[1,0] + 0.001
-    # k2 = kNE[1,1] + 0.001
-    # (path,stable) = path_gradient_descent( a, q1, r1, q2, r2, k1, k2, 0.0004, 0.0004, epsilon )
-    # # Did the algorithm converged to a stable solution?
-    # print("The final point reached is stable?\n", stable)
-    # # To which Nash equilibrium did it converge?
-    # l = path[0,:].size
-    # ind = determine_index_NE_reached(a,path[0,l-1],path[1,l-1],kNE,nNE)
-    # print("The NE reached is number:", ind)
-    # print(path[0,l-1],path[1,l-1])
+    k1 = kNE[1,0] + 0.001
+    k2 = kNE[1,1] + 0.001
+    (path,stable) = path_gradient_descent( a, q1, r1, q2, r2, k1, k2, 0.0004, 0.0004, epsilon )
+    # Did the algorithm converged to a stable solution?
+    print("The final point reached is stable?\n", stable)
+    # To which Nash equilibrium did it converge?
+    l = path[0,:].size
+    ind = determine_index_NE_reached(a,path[0,l-1],path[1,l-1],kNE,nNE)
+    print("The NE reached is number:", ind)
+    print(path[0,l-1],path[1,l-1])
 
 
-    # indices = np.arange(len(path[0,:]))
-    # colormap = plt.cm.inferno
-    # colors = colormap(indices / max(indices))
-    # fig, ax = plt.subplots()
-    # for i in range(len(path[0,:]) - 1):
-    #     ax.plot(path[0,i:i+2], path[1,i:i+2], marker='o', color=colors[i])
-    # # Color bar
-    # sm = plt.cm.ScalarMappable(cmap=colormap, norm=plt.Normalize(vmin=0, vmax=max(indices)))
-    # cbar = fig.colorbar(sm, ax=ax)
-    # cbar.set_label('Indice')
-    # # Titles
-    # plt.title('Gradient descent path')
-    # plt.xlabel('K1')
-    # plt.ylabel('K2')
-    # plt.xlim(0, a)
-    # plt.ylim(0, a)
-    # # Plot
-    # plt.show()
+    indices = np.arange(len(path[0,:]))
+    colormap = plt.cm.inferno
+    colors = colormap(indices / max(indices))
+    fig, ax = plt.subplots()
+    for i in range(len(path[0,:]) - 1):
+        ax.plot(path[0,i:i+2], path[1,i:i+2], marker='o', color=colors[i])
+    # Color bar
+    sm = plt.cm.ScalarMappable(cmap=colormap, norm=plt.Normalize(vmin=0, vmax=max(indices)))
+    cbar = fig.colorbar(sm, ax=ax)
+    cbar.set_label('Indice')
+    # Titles
+    plt.title('Gradient descent path')
+    plt.xlabel('K1')
+    plt.ylabel('K2')
+    plt.xlim(0, a)
+    plt.ylim(0, a)
+    # Plot
+    plt.show()
 
 
     #____________________________________________________________________________________________________________________

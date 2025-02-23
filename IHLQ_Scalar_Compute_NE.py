@@ -101,8 +101,10 @@ def is_it_a_saddle( a, q1, q2, r1, r2, k ) -> None:
     e_vals, e_vecs = np.linalg.eig( jacobian )
 
     # print the information obtained
-    #print("The Jacobian is: \n", jacobian )
-    #print("The eigenvalues are: \n", e_vals )
+    print("------------------------------")
+    print("The Jacobian is: \n", jacobian )
+    print("The eigenvalues are: \n", e_vals )
+    print("------------------------------")
     if e_vals[ 0 ] * e_vals[ 1 ] < 0:   # if this condtion is respect, the two eigenvalues have different sign
         print("--> This Nash equilibrium is a saddle point <--")
     else:
@@ -123,22 +125,25 @@ if __name__ == '__main__':
     #### System parameters
     
     # System variable - it is assumed to be positive: a > 0
-    a = 5
+    # a = 5
+
+    # # Cost functions parameters - all of them are assumed to be positive
+    # q1 = 1
+    # q2 = 1
+    # b1 = 1
+    # b2 = 1
+    # r1 = 1 / ( b1**2 )
+    # r2 = 2 / ( b2**2 )
+
+    a = 1.086383387
+    b1 = 0.10254
+    b2 = 0.045934
 
     # Cost functions parameters - all of them are assumed to be positive
-    q1 = 1
-    q2 = 2
-    b1 = 1
-    b2 = 1
-    r1 = 1 / ( b1**2 )
-    r2 = 1 / ( b2**2 )
-
-    # q1 = 0.11112
-    # q2 = 0.25806
-    # b1 = 0.10254
-    # b2 = 0.045934
-    # r1 = 0.40872 / ( b1**2 )
-    # r2 = 0.5949 / ( b2**2 )
+    q1 = 0.11112
+    q2 = 0.25806
+    r1 = 0.40872 / ( b1**2 )
+    r2 = 0.5949 / ( b2**2 )
 
 
     #____________________________________________________________________________________________________________________
