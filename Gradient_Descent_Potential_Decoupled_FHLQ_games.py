@@ -44,6 +44,7 @@ def perform_gradient_descent( data, step_size, num_iterations):
     mask = block_diag(*mask_blocks)
 
     K_history = np.zeros((num_iterations, N * d, N * n, T))
+    norm_grad_descent = np.zeros(num_iterations)
     E = np.zeros(( N * d, N * n))
 
     # Gradient descent loop
@@ -63,14 +64,40 @@ def perform_gradient_descent( data, step_size, num_iterations):
 
         # Store history
         K_history[m, :, :, :] = K
+        norm_grad_descent[m] = np.linalg.norm(mask * E)
 
     # print("The gradient is:\n", E)
     # print("\n The last K is:\n", K)
     # print("--------------------------------------------------")
-    return K, K_history
+    return K, K_history, norm_grad_descent
 
 
-def print_gradient_descent_norm(num_iterations,all_K_history, K):
+def print_gradient_descent_norm(all_gradient_norms):
+
+    num_runs = all_gradient_norms.shape[0]
+
+    # Plot results for each run and each player
+    plt.figure(figsize=(10, 6))
+    for r in range(num_runs):
+        plt.plot(all_gradient_norms[r, :], label=f'Run {r+1}')
+
+    ax = plt.gca()
+    ax.set_xlim([1, num_iterations - 100])
+    # ax.set_ylim([10**(-8), 10**4])
+
+    plt.xlabel('Iteration')
+    plt.ylabel('Norm Difference')
+    plt.title('Gradient Descent Convergence Across Runs')
+    #plt.legend(loc='upper right', fontsize=8, ncol=2)  # Adjust legend size
+    plt.xscale('log')  # Log scale for better visibility
+    plt.yscale('log')  # Log scale for better visibility
+    plt.grid(True, which="both", linestyle="--", linewidth=0.5)
+    plt.show()
+
+
+    return None
+
+def print_difference_norm(num_iterations,all_K_history, K):
     
     num_runs = all_K_history.shape[0]  # Number of gradient descent runs
     norm_diffs = np.zeros((num_runs, num_iterations - 100))  # Store norms for each run and iteration
@@ -89,6 +116,7 @@ def print_gradient_descent_norm(num_iterations,all_K_history, K):
     plt.ylabel('Norm Difference')
     plt.title('Gradient Descent Convergence Across Runs')
     plt.legend(loc='upper right', fontsize=8, ncol=2)  # Adjust legend size
+    plt.xscale('log')  # Log scale for better visibility
     plt.yscale('log')  # Log scale for better visibility
     plt.grid(True, which="both", linestyle="--", linewidth=0.5)
     plt.show()
@@ -178,21 +206,22 @@ print("--------------------------------------------------")
 #################################################################################################
 
 # Policy Gradient parameters
-num_runs = 20  # Number of random initializations
-num_iterations = int(1e4)
-step_size = 1e-3
+num_runs = 50  # Number of random initializations
+num_iterations = int(1e3)
+step_size = 1e-2
 final_K = np.zeros((num_runs, N*d, N*n, T))
 all_K_history = np.zeros((num_runs, num_iterations, N * d, N * n, T))
+all_gradient_norms = np.zeros((num_runs, num_iterations))
 
 # Repeat gradient descent from different initializations
 for run in range(num_runs):
     
     print(f"Run {run+1}/{num_runs}")
-    final_K[run, :, :, :], all_K_history[run, :, :, :, :] = perform_gradient_descent( data, step_size, num_iterations)
+    final_K[run, :, :, :], all_K_history[run, :, :, :, :], all_gradient_norms[run, :] = perform_gradient_descent( data, step_size, num_iterations)
 
 
 ####################################################################################################
 
-#print_convergence_to_single_point( num_runs, final_K, )
+print_convergence_to_single_point( num_runs, final_K, )
 average_final_K = (1 / run)*np.sum(final_K, axis=0)
-print_gradient_descent_norm(num_iterations,all_K_history, average_final_K)
+print_gradient_descent_norm(all_gradient_norms)

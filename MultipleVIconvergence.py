@@ -31,24 +31,19 @@ def generateRandomGame(n,d,N):
     B = np.random.randn(N, n, d)
 
     # Cost matrices
-    Q = generate_positive_semidefinite_matrix(N, n)
-    R = generate_positive_semidefinite_matrix(N, d)
-    P = generate_positive_semidefinite_matrix(N, n) # terminal cost
-
-    for i in range(0,N):
-        R[i] = R[i] + 0.01*np.eye(d)  # Ensure positive definiteness
-
+    Q = np.zeros((N, n, n))
+    R = np.zeros((N, d, d))
+    P = np.zeros((N, n, n)) # terminal cost
+    for i in range(N):
+        Qtemp = np.random.randn(n, n)
+        Q[i] = Qtemp.T @ Qtemp # Ensure positive semi-definiteness
+        Rtemp = np.random.randn(d, d)
+        R[i] = Rtemp.T @ Rtemp + 0.01*np.eye(d)  # Ensure positive definiteness
+        Ptemp = np.random.randn(n, n)
+        P[i] = Ptemp.T @ Ptemp # Ensure positive semi-definiteness
+    
     game = GameData(A, B, Q, R, P)
     return game
-
-def generate_positive_semidefinite_matrix(N,n):
-
-    M = np.random.randn(N, n, n)
-    for i in range(N):
-        Mtemp = np.random.randn(n, n)
-        M[i] = Mtemp.T @ Mtemp
-    
-    return M
 
 def check_symmetric_submatrices(M, tol=1e-8):
     """
@@ -71,7 +66,7 @@ def check_symmetric_submatrices(M, tol=1e-8):
             return False
     return True
 
-def concatenateBPA(N, d, A, B, P_time):
+def concatenateBPA(N, A, B, P_time):
     """
     Costruisce la matrice concatenata che contiene i blocchi B[i].T @ P_time[i] @ A per ogni agente.
     A: (n, n), B: (N, n, d), P_time: (N, n, n)
@@ -84,10 +79,12 @@ def concatenateBPA(N, d, A, B, P_time):
     return conc
 
 def convergenceK(T, K):
-    conv = np.zeros((1, T-1))
+    conv = 1e-10*np.ones((1, T-1))
     for t in range(1, T):
         conv[0, t-1] = np.linalg.norm(K[:, T - t - 1, :, :] - K[:, T - t, :, :])
-    z = 30
+        if conv[0, t-1] < 1e-9:
+            break
+    z = 50
     exists = conv[0, T//2:].sum() > z
     return conv, exists
 
@@ -144,7 +141,7 @@ def NE(n, d, N, T, game, show):
     for t in range(0, T):
         current_time = T - t
         invM = matrixInverted(N, d, B, R, Pt[:, current_time, :, :])
-        conc = concatenateBPA(N, d, A, B, Pt[:, current_time, :, :])
+        conc = concatenateBPA(N, A, B, Pt[:, current_time, :, :])
         if show == 1:
             print("--------------------")
             print("At time", current_time, "the matrix invM is\n", invM)
@@ -160,16 +157,15 @@ def NE(n, d, N, T, game, show):
         K[:, current_time - 1, :, :] = Ksplit
     return K
 
-def plot_convergence(all_conv):
-    num_runs, T = all_conv.shape
+def plot_convergence(num_runs, T, all_conv):
     plt.figure(figsize=(10, 5))
     for i in range(num_runs):
-        plt.plot(range(T), all_conv[i, :], alpha=0.7)
+        plt.plot(range(T-1), all_conv[i, :], alpha=0.7)
     plt.xscale('log')
     plt.yscale('log')
     ax = plt.gca()
-    ax.set_xlim([2, T-1])
-    ax.set_ylim([10**(-8), 10**5])
+    ax.set_xlim([1, T-2])
+    ax.set_ylim([10**(-8), 10**4])
     plt.grid()
     plt.xlabel('Time Step')
     plt.ylabel('Value')
@@ -248,85 +244,28 @@ def plot_A_minus_BK(A_minus_BK, L):
 # Problem data definition
 n = 2  # state dimension
 d = 1  # input dimension
-N = 2  # number of players
-T = 100  # Time horizon
-
-# generate a game with random parameters
-game = generateRandomGame(n, d, N)
-
-print("Started \n---------------------------------------------------------")
+N = 3  # number of players
+T = 1000  # Time horizon
+num_runs = 50
+all_conv = np.zeros((num_runs, T-1))
+num_conv = 0
 
 ############################################################################################################
-# Found a game that does not converge
-# initialize variables
-found_pattern = False
-max_iterations = 200  # set a limit to avoid infinite loops
-iteration = 0
-pattern_length = -1
+for i in range(0, num_runs):
 
-while not found_pattern and iteration < max_iterations:
-    iteration += 1
+    # Generate random game
+    game = generateRandomGame( n, d, N)
 
     # compute value iteration
-    K = NE(n, d, N, T, game, show=0)
+    K = NE(n, d, N, T, game, 0)
 
     # compute convergence
-    (conv, exists) = convergenceK(T, K)
+    (all_conv[i, :], exists) = convergenceK(T, K)
 
-    if exists:
-        # Save the game data to a file
-        game.save_to_file('game_data.json')
-        # check for repetition pattern in K
-        pattern_length = find_pattern_length(K, T)
-        if pattern_length > 4:
-            found_pattern = True
+    if exists == True:
+        num_conv += 1
 
-    if not found_pattern:
-        # generate a new game with random parameters
-        game = generateRandomGame(n, d, N)
-
-if found_pattern:
-    print(f"Pattern found after {iteration} iterations with length {pattern_length}.")
-    plot_evolution_K(K[:,:2*pattern_length, :, :])
-    A_minus_BK = calculate_A_minus_BK(game.A, game.B, K, T)
-    plot_A_minus_BK(A_minus_BK, pattern_length)
-else:
-    print("No pattern found within the maximum number of iterations.")
-
-print("First part finished \n---------------------------------------------------------")
 
 ############################################################################################################
-# Find a terminal cost for which the game converges
-# initialize variables
-found_convergence = False
-max_iterations = 200  # set a limit to avoid infinite loops
-iteration = 0
-all_conv = np.zeros((max_iterations, T-1))
-game.P = np.zeros((N, n, n))  # initialize terminal cost matrix
-
-while not found_convergence and iteration < max_iterations:
-
-    iteration += 1
-    #print(f"Second while, iteration {iteration}")
-
-    # compute value iteration
-    K = NE(n, d, N, T, game, show=0)
-
-    # compute convergence
-    (all_conv[iteration - 1, :], exists) = convergenceK(T, K)
-
-    if not exists:
-        # Save the game data to a file
-        game.save_to_file('game_data_convergence.json')
-        found_convergence = True
-
-    game.P = generate_positive_semidefinite_matrix(N, n)  # generate a new terminal cost matrix
-
-if found_convergence:
-    print(f"Convergence found after {iteration} iterations.")
-else:
-    print("No convergence found within the maximum number of iterations.")
-
-plot_convergence(all_conv)
-
-print("Second part finished \n---------------------------------------------------------")
+print(f"The percentage of non converging runs is {num_conv/num_runs*100}%")
+plot_convergence(num_runs, T, all_conv)
